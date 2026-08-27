@@ -1,0 +1,16 @@
+{
+  "name": "selfsender",
+  "version": "1.0.0",
+  "description": "Send a Slack announcement via DM to a list of recipients using a proper Slack bot token.",
+  "main": "app.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node app.js",
+    "web": "node server.js"
+  },
+  "dependencies": {
+    "@slack/web-api": "^7.8.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}

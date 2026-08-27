@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>selfsender — team</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; color: #1a1a1a; }
+  h1 { font-size: 1.4rem; }
+  label { display: block; margin-top: 16px; font-weight: 600; }
+  textarea, input { width: 100%; box-sizing: border-box; padding: 8px; margin-top: 4px; font-family: inherit; font-size: 0.95rem; }
+  textarea { resize: vertical; }
+  .row { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
+  .row label { margin-top: 0; }
+  button { margin-top: 20px; padding: 10px 18px; font-size: 1rem; cursor: pointer; }
+  #results { margin-top: 24px; white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: 0.85rem; background: #f5f5f5; padding: 12px; border-radius: 6px; display: none; }
+  .hint { font-size: 0.8rem; color: #666; margin-top: 4px; }
+</style>
+</head>
+<body>
+  <h1>selfsender — team</h1>
+  <p class="hint">Send a Slack DM to a list of recipients, as your own Slack account.</p>
+  <p class="hint">Logged in via Slack. <a href="/logout">Log out</a></p>
+
+  <form id="sendForm">
+    <label for="recipients">Slack IDs / emails</label>
+    <textarea id="recipients" rows="3" placeholder="U01ABCDEF2, someone@company.com, another.person@company.com"></textarea>
+    <div class="hint">Comma-separated. Extra spaces around each entry are ignored.</div>
+
+    <label for="message">Message</label>
+    <textarea id="message" rows="6" placeholder="What should be sent to these people?"></textarea>
+
+    <div class="row">
+      <input type="checkbox" id="dryRun" checked>
+      <label for="dryRun">Dry run (don't actually send)</label>
+    </div>
+
+    <label for="delayMs">Delay between sends (ms)</label>
+    <input type="number" id="delayMs" value="1200" min="0">
+
+    <button type="submit">Send</button>
+  </form>
+
+  <pre id="results"></pre>
+
+<script>
+const form = document.getElementById('sendForm');
+const results = document.getElementById('results');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const recipients = document.getElementById('recipients').value;
+  const message = document.getElementById('message').value;
+  const dryRun = document.getElementById('dryRun').checked;
+  const delayMs = document.getElementById('delayMs').value;
+
+  results.style.display = 'block';
+  results.textContent = 'Sending...';
+
+  try {
+    const res = await fetch('/api/team/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipients, message, dryRun, delayMs }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      results.textContent = `Error: ${data.error}`;
+      return;
+    }
+
+    const lines = data.details.map((d) => {
+      if (d.status === 'failed') return `FAILED -> ${d.identifier}: ${d.error}`;
+      if (d.status === 'dry-run') return `[dry run] would message ${d.identifier} (${d.userId})`;
+      return `sent -> ${d.identifier} (${d.userId})`;
+    });
+    lines.push('', `Done. Sent: ${data.sent}, Failed: ${data.failed}`);
+    results.textContent = lines.join('\n');
+  } catch (err) {
+    results.textContent = `Error: ${err.message}`;
+  }
+});
+</script>
+</body>
+
+</html>
